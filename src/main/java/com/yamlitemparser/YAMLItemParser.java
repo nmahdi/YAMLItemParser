@@ -50,7 +50,7 @@ public class YAMLItemParser {
 
     public ItemContainer parseFromConfiguration(FileConfiguration yml, String itemName){
         itemName = itemName + DOT;
-        ItemContainer container = new ItemContainer(Material.valueOf(yml.getString(MATERIAL)));
+        ItemContainer container = new ItemContainer(Material.valueOf(yml.getString(itemName + MATERIAL)));
 
         if(yml.contains(itemName + DISPLAY_NAME)){
             container.setDisplayName(yml.getString(DISPLAY_NAME));

@@ -4,9 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.mahdiii</groupId>
-    <artifactId>YAMLItemParser</artifactId>
+    <groupId>com.mahdiii</groupId>
+    <artifactId>yaml-item-parser</artifactId>
     <version>1.0</version>
+
+    <name>YAMLItemParser</name>
+    <description>Spigot library that handles loading items from YML files.</description>
+    <url>https://github.com/nmahdi/YAMLItemParser</url>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
