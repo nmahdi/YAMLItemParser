@@ -1,7 +1,6 @@
 package com.yamlitemparser;
 
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,12 +11,9 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionType;
 import org.bukkit.profile.PlayerProfile;
-import org.checkerframework.checker.units.qual.A;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,32 +24,33 @@ public class YAMLItemParser {
 
     private Random random = ThreadLocalRandom.current();
 
-    private final String DOT = ".";
-    private final String MATERIAL = "material";
-    private final String DISPLAY_NAME = "name";
-    private final String AMOUNT = "amount";
-    private final String LORE = "lore";
-    private final String ENCHANTS = "enchantments";
-    private final String GUARANTEED_ENCHANTS_AMOUNT = "guaranteed-enchantment-amount";
-    private final String BONUS_ENCHANTS_AMOUNT = "bonus-enchantment-amount";
-    private final String OVERRIDE_BONUS_ENCHANTS = "override-bonus-enchantments";
-    private final String FLAGS = "item-flags";
-    private final String DURABILITY = "durability";
-    private final String UNBREAKABLE = "unbreakable";
-    private final String ATTRIBUTES = "attributes";
-    private final String ATTRIBUTE_VALUE = "value";
-    private final String ATTRIBUTE_OPERATION = "operation";
-    private final String ATTRIBUTE_EQUIPMENT = "equipment-slot";
-    private final String SKULL_URL = "skull-url";
-    private final String POTION_EFFECTS = "potion-effects";
-    private final String POTION_COLOR = "potion-color";
+    public static final String DOT = ".";
+    public static final String MATERIAL = "material";
+    public static final String DISPLAY_NAME = "name";
+    public static final String AMOUNT = "amount";
+    public static final String LORE = "lore";
+    public static final String ENCHANTS = "enchantments";
+    public static final String GUARANTEED_ENCHANTS_AMOUNT = "guaranteed-enchantment-amount";
+    public static final String BONUS_ENCHANTS_AMOUNT = "bonus-enchantment-amount";
+    public static final String OVERRIDE_BONUS_ENCHANTS = "override-bonus-enchantments";
+    public static final String GLOW = "glow";
+    public static final String FLAGS = "item-flags";
+    public static final String DURABILITY = "durability";
+    public static final String UNBREAKABLE = "unbreakable";
+    public static final String ATTRIBUTES = "attributes";
+    public static final String ATTRIBUTE_VALUE = "value";
+    public static final String ATTRIBUTE_OPERATION = "operation";
+    public static final String ATTRIBUTE_EQUIPMENT = "equipment-slot";
+    public static final String SKULL_URL = "skull-url";
+    public static final String POTION_EFFECTS = "potion-effects";
+    public static final String POTION_COLOR = "potion-color";
 
     public ItemContainer parseFromConfiguration(FileConfiguration yml, String itemName){
         itemName = itemName + DOT;
-        ItemContainer container = new ItemContainer(Material.valueOf(yml.getString(itemName + MATERIAL)));
+        ItemContainer container = new ItemContainer(Material.valueOf(yml.getString(itemName + MATERIAL).toUpperCase()));
 
         if(yml.contains(itemName + DISPLAY_NAME)){
-            container.setDisplayName(yml.getString(DISPLAY_NAME));
+            container.setDisplayName(yml.getString(itemName + DISPLAY_NAME));
         }
 
         if(yml.contains(itemName + AMOUNT)){
@@ -101,6 +98,123 @@ public class YAMLItemParser {
         }
         if(yml.contains(itemName + OVERRIDE_BONUS_ENCHANTS)){
             container.setOverrideBonusEnchantments(yml.getBoolean(itemName + OVERRIDE_BONUS_ENCHANTS));
+        }
+
+        if(yml.contains(itemName + GLOW)){
+            container.setGlowing(yml.getBoolean(itemName + GLOW));
+        }
+
+        if(yml.contains(itemName + DURABILITY)){
+            String[] durability = yml.getString(itemName + DURABILITY).split("-");
+            container.setMinDurability(Integer.parseInt(durability[0]));
+            container.setMaxDurability(durability.length > 1 ? Integer.parseInt(durability[1]) : container.getMinDurability());
+        }
+
+        if(yml.contains(itemName + UNBREAKABLE)){
+            container.setUnbreakable(yml.getBoolean(itemName + UNBREAKABLE));
+        }
+
+        if(yml.contains(itemName + ATTRIBUTES)){
+            ConfigurationSection section = yml.getConfigurationSection(itemName + ATTRIBUTES);
+            Set<String> attributes = section.getKeys(false);
+            for(AttributeParser attributeParser : AttributeParser.values()){
+                if(attributeParser.getAttribute() == null){
+                    continue;
+                }
+                if(attributes.contains(attributeParser.getKeyword())){
+                    container.addAttribute(attributeParser.getAttribute(), new AttributeModifier(UUID.randomUUID(), "modifier", section.getDouble(itemName + ATTRIBUTES + DOT + ATTRIBUTE_VALUE), AttributeModifier.Operation.valueOf(section.getString(itemName + ATTRIBUTES + DOT + ATTRIBUTE_OPERATION)), EquipmentSlot.valueOf(section.getString(itemName + ATTRIBUTES + DOT + ATTRIBUTE_EQUIPMENT))));
+                }
+            }
+        }
+
+        if (yml.contains(itemName + FLAGS)) {
+            List<String> flags = yml.getStringList(itemName + FLAGS);
+            for(String flag : flags){
+                container.addItemFlag(ItemFlag.valueOf(flag));
+            }
+        }
+
+        if(container.isPotion()) {
+            if(yml.contains(itemName + POTION_EFFECTS)) {
+                List<String> effects = yml.getStringList(itemName + POTION_EFFECTS);
+                for (String effect : effects) {
+                    String[] parsed = effect.split(":");
+                    PotionEffectType potionEffectType = Registry.EFFECT.get(NamespacedKey.minecraft(parsed[0]));
+                    if (potionEffectType != null) {
+                        container.addEffect(new PotionEffect(potionEffectType, Integer.parseInt(parsed[2]) * 20, Integer.parseInt(parsed[1]) - 1));
+                    }
+                }
+            }
+            if(yml.contains(itemName + POTION_COLOR)){
+                String[] colors = yml.getString(itemName + POTION_COLOR).split(":");
+                container.setPotionColor(Color.fromRGB(Integer.parseInt(colors[0]), Integer.parseInt(colors[1]), Integer.parseInt(colors[2])));
+            }
+        }
+
+        if(container.isSkull() && yml.contains(itemName + SKULL_URL)){
+            container.setSkullURL(yml.getString(itemName + SKULL_URL));
+        }
+
+        return container;
+    }
+
+    public ItemContainer parseFromConfiguration(ItemContainer mergedContainer, FileConfiguration yml, String itemName) throws CloneNotSupportedException {
+        itemName = itemName + DOT;
+        ItemContainer container = mergedContainer.clone();
+
+        if(yml.contains(itemName + DISPLAY_NAME)){
+            container.setDisplayName(yml.getString(itemName + DISPLAY_NAME));
+        }
+
+        if(yml.contains(itemName + AMOUNT)){
+            String[] amount = yml.getString(itemName + AMOUNT).split("-");
+            container.setMinAmount(Integer.parseInt(amount[0]));
+            container.setMaxAmount(amount.length > 1 ? Integer.parseInt(amount[1]) : container.getMinAmount());
+        }
+
+        if(yml.contains(itemName + LORE)){
+            for(String line : yml.getStringList(itemName + LORE)){
+                container.addLore(line);
+            }
+        }
+
+        if(yml.contains(itemName + ENCHANTS)){
+            for(String line : yml.getStringList(itemName + ENCHANTS)){
+                String[] split = line.split(":");
+                String[] level = split[1].split("-");
+
+                int minLevel = Integer.parseInt(level[0]);
+                int maxLevel = minLevel;
+                if(level.length > 1){
+                    maxLevel = Integer.parseInt(level[1]);
+                }
+
+                double chance = 100;
+                if(split.length > 2){
+                    chance = Double.parseDouble(split[2]);
+                }
+
+                EnchantmentContainer enchantmentContainer = new EnchantmentContainer(Registry.ENCHANTMENT.get(NamespacedKey.minecraft(split[0].toLowerCase())), minLevel, maxLevel, chance);
+                if(enchantmentContainer.isGuaranteed()){
+                    container.addGuaranteedEnchantment(enchantmentContainer);
+                }else{
+                    container.addBonusEnchantment(enchantmentContainer);
+                }
+            }
+        }
+
+        if (yml.contains(itemName + GUARANTEED_ENCHANTS_AMOUNT)) {
+            container.setGuaranteedEnchantmentAmount(yml.getInt(itemName + GUARANTEED_ENCHANTS_AMOUNT));
+        }
+        if(yml.contains(itemName + BONUS_ENCHANTS_AMOUNT)){
+            container.setBonusEnchantmentAmount(yml.getInt(itemName + BONUS_ENCHANTS_AMOUNT));
+        }
+        if(yml.contains(itemName + OVERRIDE_BONUS_ENCHANTS)){
+            container.setOverrideBonusEnchantments(yml.getBoolean(itemName + OVERRIDE_BONUS_ENCHANTS));
+        }
+
+        if(yml.contains(itemName + GLOW)){
+            container.setGlowing(yml.getBoolean(itemName + GLOW));
         }
 
         if(yml.contains(itemName + DURABILITY)){
@@ -205,6 +319,10 @@ public class YAMLItemParser {
         }
         for(EnchantmentContainer enchantment : guaranteedEnchantments){
             itemMeta.addEnchant(enchantment.getEnchantment(), random.nextInt(enchantment.getMinLevel(), enchantment.getMaxLevel()+1), true);
+        }
+
+        if(container.isGlowing()){
+            itemMeta.setEnchantmentGlintOverride(true);
         }
 
         if(container.hasFlags()){

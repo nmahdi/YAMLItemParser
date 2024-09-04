@@ -23,7 +23,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class ItemContainer {
+public class ItemContainer implements Cloneable{
 
     private static final char COLOR_SYMBOL = '&';
 
@@ -36,6 +36,7 @@ public class ItemContainer {
     private int gEnchantmentAmount = -1;
     private int bEnchantmentAmount = -1;
     private boolean overrideBonusEnchantments = false;
+    private boolean glow = false;
     private final ArrayList<ItemFlag> itemFlags = new ArrayList<>();
     private int modelData = -1;
     private int minDurability = -1, maxDurability = -1;
@@ -151,6 +152,14 @@ public class ItemContainer {
 
     public void setOverrideBonusEnchantments(boolean overrideBonusEnchantments) {
         this.overrideBonusEnchantments = overrideBonusEnchantments;
+    }
+
+    public void setGlowing(boolean glowing){
+        this.glow = glowing;
+    }
+
+    public boolean isGlowing(){
+        return glow;
     }
 
     public boolean hasFlags(){
@@ -357,4 +366,7 @@ public class ItemContainer {
         return stack;
     }
 
+    public ItemContainer clone() throws CloneNotSupportedException {
+        return (ItemContainer) super.clone();
+    }
 }
